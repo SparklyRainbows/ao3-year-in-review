@@ -1,18 +1,27 @@
-import AO3
+import my_AO3 as AO3
 
 import time
 from heapdict import heapdict
 from datetime import datetime, timedelta
 from getpass import getpass
 
+import csv, os
+import timeit
+
 def main():
     username = input("Username: ")
     password = getpass("Password: ")
     #password = "b/6&vMqZ#$7JmAF"
 
-    session = AO3.Session(username, password)
+    try:
+        session = AO3.Session(username, password)
+    except:
+        x = input("Error logging in. Make sure your username and password are correct.")
+        return
 
-    print("Fetching history...")
+    num_years = int(input("Number of years to analyze (put zero for entire history): "))
+
+    start = timeit.default_timer()
 
     num_words = 0
     most_visited = heapdict()
@@ -22,14 +31,34 @@ def main():
     authors = heapdict()
 
     lastyear = datetime.now() - timedelta(days=3*365)
+    endDate = datetime.now() - timedelta(days=num_years*365)
 
-    #history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
-    history = session.get_history()
-    print("Fetching works...")
+    print("Fetching history...")
+    history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
+    #history = session.get_history()
+    print("Analyzing works...")
     for item in history:
-        if (item[2] < lastyear):
+        if (num_years != 0 and item[2] < endDate):
             break
-        work = item[0]
+
+        data = item[3]
+
+        num_words += data["Words"]
+        most_visited[data["Title"]] = -item[1]
+        
+        for ship in data["Relationships"]:
+            add_to_heapd(ship, relationships)
+
+        for fandom in data["Fandoms"]:
+            add_to_heapd(fandom, fandoms)
+
+        for tag in data["Tags"]:
+            add_to_heapd(tag, tags)
+
+        for author in data["Authors"]:
+            add_to_heapd(author, authors)
+
+        '''work = item[0]
 
         try:
             loaded = work.loaded
@@ -62,9 +91,49 @@ def main():
             time.sleep(3)
         except:
             print("Error fetching", work)
-            continue
+            continue'''
 
-    print()
+    print("Finished compiling data!")
+    print("Writing to file...")
+
+    statspath = 'stats.csv'
+    if os.path.exists(statspath):
+        os.remove(statspath)
+    toppath = 'top_data.csv'
+    if os.path.exists(toppath):
+        os.remove(toppath)
+    top_five_path = 'top_5_data.csv'
+    if os.path.exists(top_five_path):
+        os.remove(top_five_path)
+
+    with open(statspath, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Words", num_words])
+        writer.writerow(["Works", len(most_visited)])
+        writer.writerow(["Relationships", len(relationships)])
+        writer.writerow(["Fandoms", len(fandoms)])
+
+
+    headers = ["Top fics", "", "Top ships", "", "Top fandoms", "", "Top tags", "", "Top authors", ""]
+    row_data = [most_visited, relationships, fandoms, tags, authors]
+    output_rows = get_output_rows(row_data)
+
+    with open(toppath, 'w', encoding='UTF-8', newline='') as f:
+        writer = csv.writer(f)
+        
+        writer.writerow(headers)
+        writer.writerows(output_rows)
+
+    with open(top_five_path, 'w', encoding='UTF-8', newline='') as f:
+        writer = csv.writer(f)
+        
+        writer.writerow(headers)
+        writer.writerows(output_rows[:5])
+
+    print("Done! Total runtime:", (timeit.default_timer() - start)/60, "mins")
+    x = input("Press enter to exit.")
+
+    '''print()
     print("===STATS===")
 
     print("Words:", num_words)
@@ -79,7 +148,36 @@ def main():
     print_arr("Top ships: ", top_5(relationships))
     print_arr("Top fandoms: ", top_5(fandoms))
     print_arr("Top tags: ", top_5(tags))
-    print_arr("Top authors: ", top_5(authors))
+    print_arr("Top authors: ", top_5(authors))'''
+
+def get_output_rows(row_data):
+    output = []
+    longest = 0
+
+    for heapd in row_data:
+        longest = max(longest, len(heapd))
+
+    for x in range(longest):
+        element = []
+
+        for heapd in row_data:
+            if heapd:
+                el = heapd.popitem()
+                element.append(el[0])
+                element.append(-el[1])
+            else:
+                element.append("")
+                element.append("")
+        
+        output.append(element)
+    
+    return output
+
+
+def get_element(heapd):
+    if heapd:
+        return heapd.popitem()
+    return ""
 
 def add_to_heapd(item, heapd):
     if item in heapd:
@@ -102,6 +200,8 @@ def top_5(heapd):
 
 def print_arr(text, arr):
     print(text)
+    if arr is None:
+        return
     for x in arr:
         print(x)
     print()
