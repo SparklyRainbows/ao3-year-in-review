@@ -5,6 +5,7 @@ anaconda-navigator==1.10.0
 anaconda-project==0.8.3
 ao3-api==2.2.0
 argh==0.26.2
+argon2-cffi @ file:///C:/ci/argon2-cffi_1596828585465/work
 asn1crypto @ file:///tmp/build/80754af9/asn1crypto_1596577642040/work
 astroid @ file:///C:/ci/astroid_1592487315634/work
 astropy==4.0.2
@@ -63,6 +64,7 @@ glob2==0.7
 greenlet @ file:///C:/ci/greenlet_1600885448389/work
 h5py==2.10.0
 HeapDict==1.0.1
+heroku==0.1.4
 html5lib @ file:///tmp/build/80754af9/html5lib_1593446221756/work
 idna @ file:///tmp/build/80754af9/idna_1593446292537/work
 imageio @ file:///tmp/build/80754af9/imageio_1594161405741/work
@@ -164,7 +166,7 @@ pyreadline==2.1
 pyrsistent @ file:///C:/ci/pyrsistent_1600141795814/work
 PySocks==1.7.1
 pytest==0.0.0
-python-dateutil==2.8.1
+python-dateutil==1.5
 python-jsonrpc-server @ file:///tmp/build/80754af9/python-jsonrpc-server_1600278539111/work
 python-language-server @ file:///tmp/build/80754af9/python-language-server_1600454544709/work
 pytz==2020.1
