@@ -1,5 +1,5 @@
 altgraph==0.17
-anaconda-navigator==2.1.1
+anaconda-navigator
 ao3-api==2.2.0
 appdirs==1.4.4
 argh==0.26.2
