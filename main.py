@@ -1,7 +1,6 @@
 import AO3
 
 import time
-from queue import PriorityQueue
 from heapdict import heapdict
 from datetime import datetime, timedelta
 from getpass import getpass
