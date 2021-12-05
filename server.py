@@ -6,7 +6,7 @@ import time
 from heapdict import heapdict
 from datetime import datetime, timedelta
 
-import csv, os
+import csv, os, sys
 import timeit
 
 app = Flask(__name__)
@@ -84,8 +84,6 @@ def login():
 
     try:
         global session
-        print(username)
-        print(password)
         session = AO3.Session(username, password)
     except Exception as e:
         print(e)
@@ -103,18 +101,18 @@ def login():
 
 @app.route('/download1')
 def sendfile1():
-  path="/stats.csv"
-  return send_file("/stats.csv",as_attachment=True)
+  path=sys.path[0]+"/stats.csv"
+  return send_file(path,as_attachment=True)
 
 @app.route('/download2')
 def sendfile2():
-  path="/top_data.csv"
-  return send_file("/top_data.csv",as_attachment=True)
+  path=sys.path[0]+"/top_data.csv"
+  return send_file(path,as_attachment=True)
 
 @app.route('/download3')
 def sendfile3():
-  path="/top_5_data.csv"
-  return send_file("/top_5_data.csv",as_attachment=True)
+  path=sys.path[0]+"/top_5_data.csv"
+  return send_file(path,as_attachment=True)
 
 
 @app.route('/debugtext')
@@ -133,8 +131,8 @@ def debugtext():
 
       yield "data:Fetching history...\n\n"
       
-      history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
-      #history = session.get_history()
+      #history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
+      history = session.get_history()
 
       for x in history:
         for item in x:
@@ -196,7 +194,6 @@ def debugtext():
           
           writer.writerow(headers)
           writer.writerows(output_rows[:5])
-
 
       yield "data:Total runtime: " + str((timeit.default_timer() - start)/60)+ " mins\n\n"
       yield "data:Done!\n\n"

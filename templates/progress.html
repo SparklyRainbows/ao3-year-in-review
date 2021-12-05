@@ -12,16 +12,19 @@
 
         var s2 = new EventSource("/debugtext");
         var i =0 ;
+        //document.getElementById("dl").style.display="none";
         s2.onmessage = function (event) {
             if (i>0) return;
+            document.getElementById("dl").style.display="none";
             var node = document.createTextNode(event.data);
             document.getElementById("debugtext").appendChild(node);
             if (event.data.substring(0,5) == "Done!") {
+                document.getElementById("dl").style.display = "block";
                 i = 1;                
             }            
             var br = document.createElement("br");
             document.getElementById("debugtext").appendChild(br);
-            var br1 = document.createElement("a");                        
+            var br1 = document.createElement("a");      
         }
 
     </script>
@@ -31,7 +34,9 @@
     <h1>Processing history...</h1>
 
     <p id="debugtext"> </p>
-    <a href="/download1">download 1</a>
-    <a href="/download2">download 2</a>
-    <a href="/download3">download 3</a>
+    <div id="dl" >
+    <a href="/download1">Overall stats</a><br>
+    <a href="/download2">All data</a><br>
+    <a href="/download3">Top 5 data</a><br>
+</div>
 </body>
