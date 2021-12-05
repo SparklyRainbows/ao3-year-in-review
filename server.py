@@ -177,7 +177,7 @@ def debugtext():
           writer.writerow(["Words", num_words])
           writer.writerow(["Works", len(most_visited)])
           writer.writerow(["Relationships", len(relationships)])
-          writer.writerow(["Fandoms", len(fandoms)])
+          writer.writerow(["Fandoms", len(fandoms)]) 
 
       headers = ["Top fics", "", "Top ships", "", "Top fandoms", "", "Top tags", "", "Top authors", ""]
       row_data = [most_visited, relationships, fandoms, tags, authors]
