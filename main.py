@@ -34,8 +34,8 @@ def main():
     endDate = datetime.now() - timedelta(days=num_years*365)
 
     print("Fetching history...")
-    history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
-    #history = session.get_history()
+    #history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
+    history = session.get_history()
     print("Analyzing works...")
     for item in history:
         if (num_years != 0 and item[2] < endDate):
