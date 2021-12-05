@@ -84,6 +84,8 @@ def login():
 
     try:
         global session
+        print(username)
+        print(password)
         session = AO3.Session(username, password)
     except:
         #x = input("Error logging in. Make sure your username and password are correct.")
