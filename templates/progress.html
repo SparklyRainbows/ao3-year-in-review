@@ -1,0 +1,37 @@
+<!doctype html>
+
+
+<head>
+    <title>AO3 year in review</title>
+    <meta charset=utf-8>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script>
+
+        var s2 = new EventSource("/debugtext");
+        var i =0 ;
+        s2.onmessage = function (event) {
+            if (i>0) return;
+            var node = document.createTextNode(event.data);
+            document.getElementById("debugtext").appendChild(node);
+            if (event.data.substring(0,5) == "Done!") {
+                i = 1;                
+            }            
+            var br = document.createElement("br");
+            document.getElementById("debugtext").appendChild(br);
+            var br1 = document.createElement("a");                        
+        }
+
+    </script>
+</head>
+
+<body>
+    <h1>Processing history...</h1>
+
+    <p id="debugtext"> </p>
+    <a href="/download1">download 1</a>
+    <a href="/download2">download 2</a>
+    <a href="/download3">download 3</a>
+</body>

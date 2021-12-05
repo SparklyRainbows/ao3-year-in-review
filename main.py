@@ -8,19 +8,9 @@ from getpass import getpass
 import csv, os
 import timeit
 
-def main():
-    username = input("Username: ")
-    password = getpass("Password: ")
-    #password = "b/6&vMqZ#$7JmAF"
+from flask import Flask, render_template
 
-    try:
-        session = AO3.Session(username, password)
-    except:
-        x = input("Error logging in. Make sure your username and password are correct.")
-        return
-
-    num_years = int(input("Number of years to analyze (put zero for entire history): "))
-
+def main(session, num_years):
     start = timeit.default_timer()
 
     num_words = 0
@@ -131,7 +121,7 @@ def main():
         writer.writerows(output_rows[:5])
 
     print("Done! Total runtime:", (timeit.default_timer() - start)/60, "mins")
-    x = input("Press enter to exit.")
+    #x = input("Press enter to exit.")
 
     '''print()
     print("===STATS===")
@@ -217,5 +207,9 @@ def test():
     print(work.authors)
 
 if __name__ == "__main__":
-    main()
+    username = input("Username: ")
+    password = getpass("Password: ")
+    #password = "b/6&vMqZ#$7JmAF"
+    num_years = int(input("Number of years to analyze (put zero for entire history): "))
+    main(username, password, num_years)
     #test()
