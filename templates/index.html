@@ -4,11 +4,267 @@
 <head>
     <title>AO3 year in review</title>
     <meta charset=utf-8>
+
+    <!-- <script src="jquery.min.js"></script> -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script>
+      function Buttonclick1(){
+        IntiLocalStorage();
+        data={
+          mostvisited: [{name: "Grand unified theory", value: 3}],
+          relationships: [{name: "char A/char B", value: 1}],
+          fandoms: [{name: "SV", value: 5}],
+          tags: [{name: "Angst", value: 3}],
+          authors: [{name: "sam", value: 1}],
+          totalwords:0
+        };
+
+        test(data);
+      }
+      function Buttonclick2(){
+        data={
+          mostvisited: [{name: "Peach wine", value: 2}],
+          relationships: [{name: "char C/char B", value: 1}],
+          fandoms: [{name: "SV", value: 3}],
+          tags: [{name: "H/C", value: 3}],
+          authors: [{name: "jas", value: 1}],
+          totalwords:200
+        };
+        
+        test(data);
+      }
+
+
+      function submit() {
+        uname = document.getElementById("username").value;
+        pword = document.getElementById("password").value;
+
+        IntiLocalStorage();
+
+        //call with page = 0 -> will return # pages in history
+        $.post("/apicall", {username: uname, password: pword, page: -1})
+          .done(function(data) {
+            if (data == "Error logging in. Make sure your username and password are correct.") {
+              printLine("Encountered an error! Make sure your username and password are correct. If it still doesn't work, try waiting a few mins before trying again - we might be rate-limited.");
+            } else {
+
+              var date = new Date();
+              SaveToLocalStorage(date.getHours(), "hour");
+              SaveToLocalStorage(date.getMinutes(), "min");
+
+              printLine("Starting to process~");
+              document.getElementById("submit").disabled = true;
+
+              //console.log("num pages " + data);
+              const numPages = parseInt(data);
+              SaveToLocalStorage(numPages, "numPages");
+
+              printLine("Found " + numPages + " pages of history.");
+
+              callAPI(uname, pword, 0, numPages);
+            }
+        });
+        
+      }
+
+      function callAPI(uname, pword, p, maxPages){      
+        
+        printLine("Processing page " + (p+1) + " of " + maxPages + "...");
+
+        $.post("/apicall", {username: uname, password: pword, page: p})
+          .done(function(data) {
+            if (data == "Error logging in. Make sure your username and password are correct.") {
+              printLine("Encountered an error! Make sure your username and password are correct.");
+            } else if (data == "We are being rate-limited. Try again in a while or reduce the number of requests") {
+              printLine("We are being rate-limited. Try again in a while or reduce the number of requests");
+            } else {
+              //console.log(data);
+
+              oldData = LoadFromLocalStorage("key");
+              newData = combine(oldData,data);
+              SaveToLocalStorage(newData,"key"); 
+              
+              if (p+1 < maxPages) {
+                callAPI(uname, pword, p+1, maxPages);  
+              } else {
+                printLine("All done!");
+                printLine("")
+
+                printData()
+              }
+            }
+          });
+      }
+
+      function printData() {
+        data = LoadFromLocalStorage("key");
+
+        printLine("Total words read in the past year: " + data.totalwords_year);
+        printLine("Total words read (lifetime): " + data.totalwords);
+        
+        printDict("Top Authors", data.authors, data.authors_year);
+        printDict("Top Fandoms", data.fandoms, data.fandoms_year);
+        printDict("Most Visited Fics", data.mostvisited, data.mostvisited_year);
+        printDict("Top Relationships", data.relationships, data.relationships_year);
+        printDict("Top Tags", data.tags, data.tags_year);
+
+        printLine("");
+        var startHour = parseInt(LoadFromLocalStorage("hour"));
+        var startMin = parseInt(LoadFromLocalStorage("min"));
+        var endTime = new Date();
+        var diff = (endTime.getHours() - startHour) * 60 + (endTime.getMinutes() - startMin);
+        printLine("Time taken to read " + LoadFromLocalStorage("numPages") + " pages: " + diff + " mins.");
+      }
+
+      function printDict(title, dict, dict_year) {
+        printLine("");
+        printLine(title);
+
+        dict.sort((obj1, obj2) => {
+          return compareObjects(obj1, obj2, 'value');
+        })
+        dict_year.sort((obj1, obj2) => {
+          return compareObjects(obj1, obj2, 'value');
+        })
+
+        var counter = 0;
+        for (const [key, value] of Object.entries(dict_year)) {
+          printLine(value.name + ": " + value.value);
+          counter++;
+
+          if (counter >= 5) {
+            break;
+          }
+        }
+
+        createCSV(title + " (Past year)", dict_year);
+        createCSV(title + " (Lifetime)", dict);
+      }
+
+      function createCSV(fileName, dict) {
+        const rows = [];
+        for (const [key, value] of Object.entries(dict)) {
+          rows.push([value.name, value.value]);
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+
+        rows.forEach(function(rowArray) {
+          let row = rowArray.join(",");
+          csvContent += row + "\r\n";
+        });
+
+        var encodedUri = encodeURI(csvContent);
+        var link = document.createElement("a");
+        link.innerHTML = "Download " + fileName;
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", fileName + ".csv");
+        //document.body.appendChild(link); // Required for FF
+        document.getElementById("debugtext").appendChild(link);
+
+        printLine("");
+
+        //link.click(); // This will download the data file named "my_data.csv".
+      }
+
+      function compareObjects(object1, object2, key) {
+        const obj1 = object1[key];
+        const obj2 = object2[key];
+
+        if (obj1 < obj2) {
+          return 1;
+        }
+        if (obj1 > obj2) {
+          return -1;
+        }
+        return 0;
+      }
+
+      function test(data){        
+        oldData = LoadFromLocalStorage("key");
+        newData = combine(data, oldData);
+        SaveToLocalStorage(newData,"key");                    
+      }
+
+
+      function IntiLocalStorage()
+      {
+        SaveToLocalStorage(null,"key");
+      }
+
+      function LoadFromLocalStorage(key)
+      {
+        var data = JSON.parse(localStorage.getItem(key));
+        if (data == null ) return {mostvisited:[],relationships:[],fandoms:[],tags:[],authors:[],totalwords:0,
+          mostvisited_year:[],relationships_year:[],fandoms_year:[],tags_year:[],authors_year:[],totalwords_year:0};
+        return data;
+      }
+
+      function SaveToLocalStorage(data, key)
+      {
+        value  = JSON.stringify(data);
+        localStorage.setItem(key, value);        
+      }
+
+      function combine(oldvalue,newvalue)
+      {
+        var newAuthors = combineMap(oldvalue.authors, newvalue.authors);
+        var newVisited = combineMap(oldvalue.mostvisited, newvalue.mostvisited);
+        var newRel = combineMap(oldvalue.relationships, newvalue.relationships);
+        var newFandoms = combineMap(oldvalue.fandoms, newvalue.fandoms);
+        var newTags = combineMap(oldvalue.tags, newvalue.tags);
+
+        var newAuthors_year = combineMap(oldvalue.authors_year, newvalue.authors_year);
+        var newVisited_year = combineMap(oldvalue.mostvisited_year, newvalue.mostvisited_year);
+        var newRel_year = combineMap(oldvalue.relationships_year, newvalue.relationships_year);
+        var newFandoms_year = combineMap(oldvalue.fandoms_year, newvalue.fandoms_year);
+        var newTags_year = combineMap(oldvalue.tags_year, newvalue.tags_year);
+
+        var ret = {
+          mostvisited : newVisited,
+          relationships : newRel,
+          fandoms : newFandoms,
+          tags : newTags,
+          authors : newAuthors,
+          totalwords: oldvalue.totalwords+newvalue.totalwords,
+
+          mostvisited_year : newVisited_year,
+          relationships_year : newRel_year,
+          fandoms_year : newFandoms_year,
+          tags_year : newTags_year,
+          authors_year : newAuthors_year,
+          totalwords_year: oldvalue.totalwords_year+newvalue.totalwords_year
+        };
+
+        //console.log(ret);
+        
+        return ret;
+      }
+
+      function combineMap(oldMap, newMap)
+      {
+        arr = oldMap.concat(newMap);
+        arr = Array.from(arr.reduce((m, {name, value}) => m.set(name, (m.get(name) || 0) + value), new Map), ([name, value]) => ({name, value}));
+        return arr;
+      }
+
+      function printLine(str)
+      {
+        var node = document.createTextNode(str);
+        document.getElementById("debugtext").appendChild(node);
+
+        var br = document.createElement("br");
+        document.getElementById("debugtext").appendChild(br);
+      }
+
+  </script>
 </head>
 
 <body>
     <h1>AO3 Year in Review</h1>
-    <div id="login-form">
+    <!-- <div id="login-form">
       <form action="/login/" method="post">
         <div class="container">
           <label for="uname"><b>Username</b></label>
@@ -23,6 +279,25 @@
           <button type="submit">Start</button>
         </div>
       </form>
+    </div> -->
+
+    <div class="container">
+      <label for="uname"><b>Username</b></label>
+      <input type="text" placeholder="Enter Username" name="username" id="username" required>
+      <br>
+      <label for="psw"><b>Password</b></label>
+      <input type="password" placeholder="Enter Password" name="password" id="password" required>
+      <br>
+      <!-- <label for="years"><b>Num years to analyze (put 0 to analyze all history)</b></label>
+      <input type="number" step="1" pattern="\d+" name="years" min="0" id="years" required>
+      <br> -->
+      <button id="submit" onClick="submit()">Start</button>
+      <!-- <button id="submit1" onClick="Buttonclick1()">1</button>
+      <button id="submit2" onClick="Buttonclick2()">2</button> -->
     </div>
+
+    <br>
+
+    <p id="debugtext"> </p>
 
 </body>

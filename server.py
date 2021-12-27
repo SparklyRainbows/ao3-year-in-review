@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, Response, send_file
+import uuid
 import main
 import my_AO3 as AO3
 import time
@@ -8,15 +9,26 @@ from datetime import datetime, timedelta
 
 import csv, os, sys
 import timeit
+import json
 
 app = Flask(__name__)
 
+def convert_to_json(heapd):
+    ret = []
+    for key in heapd:
+        pair = {"name": key, "value": heapd[key]}
+        ret.append(pair)
+    #j_ret = json.dumps(ret)
+    #return j_ret[1:-1]
+    return ret
 
 def add_to_heapd(item, heapd):
     if item in heapd:
-        heapd[item] -= 1
+        #heapd[item] -= 1
+        heapd[item] += 1
     else:
-        heapd[item] = -1
+        #heapd[item] = -1
+        heapd[item] = 1
 
 def get_output_rows(row_data):
     output = []
@@ -73,31 +85,148 @@ def print_arr(text, arr):
 def index():
   return render_template('index.html')
 
-@app.route('/login/', methods=['post', 'get'])
-def login():
+def get_total_pages(username, password):
+    #return "2"
+    try:
+        session = AO3.Session(username, password)
+        return str(session._history_pages)
+    except Exception as e:
+        print(e)
+        return "Error logging in. Make sure your username and password are correct."
+
+def process(username, password, page):
+    try:
+        session = AO3.Session(username, password)
+
+        endDate = datetime.now() - timedelta(days=365)
+
+        #read 1 page
+        history = session.get_history(hist_sleep=3, start_page=int(page), max_pages=int(page)+1, timeout_sleep=60)
+
+        num_words = 0
+        most_visited = dict()
+        relationships = dict()
+        fandoms = dict()
+        tags = dict()
+        authors = dict()
+
+        #stats in the past year
+        num_words_year = 0
+        most_visited_year = dict()
+        relationships_year = dict()
+        fandoms_year = dict()
+        tags_year = dict()
+        authors_year = dict()
+ 
+        for item in history:
+            # if isinstance(item, str):
+            #   yield item
+            #   continue
+            # if (num_years != 0 and item[2] < endDate):
+            #     break
+
+            num_words += add_helper(item, most_visited, relationships, fandoms, tags, authors)
+            # only add if last visited date is past the prev year
+            if (item[2] > endDate):
+                num_words_year += add_helper(item, most_visited_year, relationships_year, fandoms_year, tags_year, authors_year)
+
+        ret = {
+            "totalwords": num_words,
+            "mostvisited": convert_to_json(most_visited),
+            "relationships": convert_to_json(relationships),
+            "fandoms": convert_to_json(fandoms),
+            "tags": convert_to_json(tags),
+            "authors": convert_to_json(authors),
+
+            "totalwords_year": num_words_year,
+            "mostvisited_year": convert_to_json(most_visited_year),
+            "relationships_year": convert_to_json(relationships_year),
+            "fandoms_year": convert_to_json(fandoms_year),
+            "tags_year": convert_to_json(tags_year),
+            "authors_year": convert_to_json(authors_year),
+        }
+
+        #print(ret)
+
+        return ret
+    except Exception as e:
+        print(e)
+        return "Error logging in. Make sure your username and password are correct."
+        #return str(e)
+
+def add_helper(item, most_visited, relationships, fandoms, tags, authors):
+    data = item[3]
+
+    #num_words += data["Words"]
+    most_visited[data["Title"]] = item[1]
+    
+    for ship in data["Relationships"]:
+        add_to_heapd(ship, relationships)
+
+    for fandom in data["Fandoms"]:
+        add_to_heapd(fandom, fandoms)
+
+    for tag in data["Tags"]:
+        add_to_heapd(tag, tags)
+
+    for author in data["Authors"]:
+        add_to_heapd(author, authors)
+
+    return data["Words"]
+
+@app.route('/apicall', methods=['post', 'get'])
+def api_call():
     if request.method == 'POST':
         username = request.form.get('username')  # access the data inside 
         password = request.form.get('password')
-        global num_years
-        num_years = int(request.form.get('years'))
+        #num_years = int(request.form.get('years'))
+        page = request.form.get('page')
+
+        if page == "-1":
+            return get_total_pages(username, password)
+
+        return process_wrapper(username, password, page)
+        #return "abc"
 
 
-    try:
-        global session
-        session = AO3.Session(username, password)
-    except Exception as e:
-        print(e)
-        #x = input("Error logging in. Make sure your username and password are correct.")
-        print("Error logging in. Make sure your username and password are correct.")
-        return
+def process_wrapper(username, password, page):
+    ret = process(username, password, page)
+    if ret == "Error logging in. Make sure your username and password are correct.":
+        time.sleep(60)
+        return process_wrapper(username, password, page)
+    return ret
 
-    #main.main(session, num_years)
+# @app.route('/login/', methods=['post', 'get'])
+# def login():
+#     if request.method == 'POST':
+#         username = request.form.get('username')  # access the data inside 
+#         password = request.form.get('password')
+#         global num_years
+#         num_years = int(request.form.get('years'))
 
-    #return render_template('index.html', output=output)
-    #return main.main(username, password, num_years)
-    #search()
-    return render_template('progress.html')
-    #return send_file('templates/progress.html', session=session, num_years=num_years)
+
+#     try:
+#         global session
+#         session = AO3.Session(username, password)
+#     except Exception as e:
+#         print(e)
+#         #x = input("Error logging in. Make sure your username and password are correct.")
+#         print("Error logging in. Make sure your username and password are correct.")
+#         return
+
+#     #main.main(session, num_years)
+
+#     #return render_template('index.html', output=output)
+#     #return main.main(username, password, num_years)
+#     #search()
+#     return render_template('progress.html')
+#     #return send_file('templates/progress.html', session=session, num_years=num_years)
+
+
+@app.route('/download/<filename>')
+def sendfile(filename):
+  path1=sys.path[0]+"/" + filename
+  return send_file(path1,as_attachment=True)
 
 @app.route('/download1')
 def sendfile1():
@@ -115,100 +244,103 @@ def sendfile3():
   return send_file(path,as_attachment=True)
 
 
-@app.route('/debugtext')
-def debugtext():
-  def generate():           
-      start = timeit.default_timer()
+# @app.route('/debugtext')
+# def debugtext():
+#   def generate():           
+#       start = timeit.default_timer()
+#       uid = str(uuid.uuid4())
+#       num_words = 0
+#       most_visited = heapdict()
+#       relationships = heapdict()
+#       fandoms = heapdict()
+#       tags = heapdict()
+#       authors = heapdict()
 
-      num_words = 0
-      most_visited = heapdict()
-      relationships = heapdict()
-      fandoms = heapdict()
-      tags = heapdict()
-      authors = heapdict()
+#       endDate = datetime.now() - timedelta(days=num_years*365)
 
-      endDate = datetime.now() - timedelta(days=num_years*365)
-
-      yield "data:Fetching history...\n\n"
+#       yield "data:Fetching history...\n\n"
       
-      #history = session.get_history(hist_sleep=3, start_page=0, max_pages=0, timeout_sleep=60)
-      history = session.get_history()
+#       history = session.get_history(hist_sleep=3, start_page=0, max_pages=3, timeout_sleep=60)
+#       #history = session.get_history()
 
-      for x in history:
-        for item in x:
-          if isinstance(item, str):
-            yield item
-            continue
-          if (num_years != 0 and item[2] < endDate):
-              break
+#       for x in history:
+#         for item in x:
+#           if isinstance(item, str):
+#             yield item
+#             continue
+#           if (num_years != 0 and item[2] < endDate):
+#               break
 
-          data = item[3]
+#           data = item[3]
 
-          num_words += data["Words"]
-          most_visited[data["Title"]] = -item[1]
+#           num_words += data["Words"]
+#           most_visited[data["Title"]] = -item[1]
           
-          for ship in data["Relationships"]:
-              add_to_heapd(ship, relationships)
+#           for ship in data["Relationships"]:
+#               add_to_heapd(ship, relationships)
 
-          for fandom in data["Fandoms"]:
-              add_to_heapd(fandom, fandoms)
+#           for fandom in data["Fandoms"]:
+#               add_to_heapd(fandom, fandoms)
 
-          for tag in data["Tags"]:
-              add_to_heapd(tag, tags)
+#           for tag in data["Tags"]:
+#               add_to_heapd(tag, tags)
 
-          for author in data["Authors"]:
-              add_to_heapd(author, authors)
+#           for author in data["Authors"]:
+#               add_to_heapd(author, authors)
 
-      yield "data:Finished compiling data!\n\n"
-      yield "data:Writing to file...\n\n"
+#       yield "data:Finished compiling data!\n\n"
+#       yield "data:Writing to file...\n\n"
 
-      statspath = 'stats.csv'
-      if os.path.exists(statspath):
-          os.remove(statspath)
-      toppath = 'top_data.csv'
-      if os.path.exists(toppath):
-          os.remove(toppath)
-      top_five_path = 'top_5_data.csv'
-      if os.path.exists(top_five_path):
-          os.remove(top_five_path)
+#       statspath = 'stats' + uid + '.csv'
+#       if os.path.exists(statspath):
+#           os.remove(statspath)
+#       toppath = 'top_data' + uid + '.csv'
+#       if os.path.exists(toppath):
+#           os.remove(toppath)
+#       top_five_path = 'top_5_data'  + uid + '.csv'
+#       if os.path.exists(top_five_path):
+#           os.remove(top_five_path)
 
-      with open(statspath, 'w', newline='') as f:
-          writer = csv.writer(f)
-          writer.writerow(["Words", num_words])
-          writer.writerow(["Works", len(most_visited)])
-          writer.writerow(["Relationships", len(relationships)])
-          writer.writerow(["Fandoms", len(fandoms)]) 
+#       with open(statspath, 'w', newline='') as f:
+#           writer = csv.writer(f)
+#           writer.writerow(["Words", num_words])
+#           writer.writerow(["Works", len(most_visited)])
+#           writer.writerow(["Relationships", len(relationships)])
+#           writer.writerow(["Fandoms", len(fandoms)]) 
 
-      headers = ["Top fics", "", "Top ships", "", "Top fandoms", "", "Top tags", "", "Top authors", ""]
-      row_data = [most_visited, relationships, fandoms, tags, authors]
-      output_rows = get_output_rows(row_data)
+#       headers = ["Top fics", "", "Top ships", "", "Top fandoms", "", "Top tags", "", "Top authors", ""]
+#       row_data = [most_visited, relationships, fandoms, tags, authors]
+#       output_rows = get_output_rows(row_data)
 
-      with open(toppath, 'w', encoding='UTF-8', newline='') as f:
-          writer = csv.writer(f)
+#       with open(toppath, 'w', encoding='UTF-8', newline='') as f:
+#           writer = csv.writer(f)
           
-          writer.writerow(headers)
-          writer.writerows(output_rows)
+#           writer.writerow(headers)
+#           writer.writerows(output_rows)
 
-      with open(top_five_path, 'w', encoding='UTF-8', newline='') as f:
-          writer = csv.writer(f)
+#       with open(top_five_path, 'w', encoding='UTF-8', newline='') as f:
+#           writer = csv.writer(f)
           
-          writer.writerow(headers)
-          writer.writerows(output_rows[:5])
+#           writer.writerow(headers)
+#           writer.writerows(output_rows[:5])
 
-      yield "data:Total runtime: " + str((timeit.default_timer() - start)/60)+ " mins\n\n"
-      yield "data:Done!\n\n"
+#       yield "data:Total runtime: " + str((timeit.default_timer() - start)/60)+ " mins\n\n"
+#       yield 'data:<a href="/download/' +   statspath +  '>Overall stats</a><br>\n\n'
+#       yield 'data:<a href="/download/' + toppath + '>All data</a><br>\n\n'
+#       yield 'data:<a href="/download/' + top_five_path + '>Top 5 data</a><br>\n\n'
+#       yield "data:Done!\n\n"
 
-  return Response(generate(), mimetype= 'text/event-stream')
+#   return Response(generate(), mimetype= 'text/event-stream')
     
-'''@app.route('/debugtext')
-def debugtext():
-  def generate():
-        x = 0
-        while x < 100:
-            x = x + 10
-            time.sleep(0.2)
-            yield "data:" + str(x) + "\n\n"
-  return Response(generate(), mimetype= 'text/event-stream')'''
+# '''@app.route('/debugtext')
+# def debugtext():
+#   def generate():
+#         x = 0
+#         while x < 100:
+#             x = x + 10
+#             time.sleep(0.2)
+#             yield "data:" + str(x) + "\n\n"
+#   return Response(generate(), mimetype= 'text/event-stream')'''
 
 if __name__ == '__main__':
   app.run(debug=True)

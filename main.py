@@ -8,6 +8,8 @@ from getpass import getpass
 import csv, os
 import timeit
 
+import json
+
 from flask import Flask, render_template
 
 def main(session, num_years):
@@ -213,3 +215,6 @@ if __name__ == "__main__":
     num_years = int(input("Number of years to analyze (put zero for entire history): "))
     main(username, password, num_years)
     #test()
+
+def process(username, password, num_years):
+    print("abc")

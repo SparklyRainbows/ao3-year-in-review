@@ -368,12 +368,12 @@ class Session(GuestSession):
                         try:
                             self._load_history(page=page+1)
                             print(f"Reading history page {page+1} of {total_pages}")
-                            yield "data:Reading history page " + str(page+1) +" of " + str(total_pages) + "\n\n"
+                            #yield "data:Reading history page " + str(page+1) +" of " + str(total_pages) + "\n\n"
                             loaded = True
 
                         except utils.HTTPError:
                             print(f"History being rate limited, sleeping for {timeout_sleep} seconds")
-                            yield "data:History being rate limited, sleeping for " + str(timeout_sleep) + " seconds"
+                            #yield "data:History being rate limited, sleeping for " + str(timeout_sleep) + " seconds"
                             time.sleep(timeout_sleep)
 
                 # Check for maximum history page load
@@ -385,7 +385,7 @@ class Session(GuestSession):
                 if hist_sleep is not None and hist_sleep > 0:
                     time.sleep(hist_sleep)
 
-        yield self._history
+        #yield self._history
         return self._history
 
     def _load_history(self, page=1):       
