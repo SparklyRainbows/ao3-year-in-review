@@ -224,7 +224,7 @@ def api_call():
 
 def process_wrapper(username, password, page):
     ret = process(username, password, page)
-    if ret == "Error logging in. Make sure your username and password are correct.":
+    if ret == "We are being rate-limited. Try again in a while or reduce the number of requests":
         time.sleep(60)
         return process_wrapper(username, password, page)
     return ret
