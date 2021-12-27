@@ -1,4 +1,8 @@
 from flask import Flask, render_template, request, Response, send_file
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
+import base64
+
 import uuid
 import main
 import my_AO3 as AO3
@@ -85,6 +89,32 @@ def print_arr(text, arr):
 def index():
   return render_template('index.html')
 
+def decrypt(enc):
+    private_key = """-----BEGIN RSA PRIVATE KEY-----
+MIICXQIBAAKBgQCxbTIZN2KtvkIH+BLndOJkd3yIqpuQuYlP7PmQxIHGHhNkksCh
+xRdL9rylpSibv8aVjeXd6QETccN+9XHb95aswOEuoCGUt98CH+kyP0P/G47VKear
+3+Rr5kJzDS3SuBT8o2fY90kTvK/g9pCDHOWE2JSTj0CEDH5rMS0Z4Cbb6QIDAQAB
+AoGBAI/Fvlz0pn/HtlYizZ7E9lcXA9Dy/tBNqFkd3DVVJxvVbz2GNZZg0Tn7HG7V
+4Iwk4NR7gZNKplaNTy9n0PXAMVU8gvmuNrxNKAwrUFEl8Jviw+DI0vBFeF64zL/k
+7kH4PqqR7htFx+ObAOwqOnZyNyw0kj5S/iJpBdSPgmb5hY4hAkEA6vcv/s985Er+
+2jhsCI3hPLfFGayhWkuVmcp4Kp3uaGqUqR/VLeo1DDuxPgUKyZUtWcjbZfSaDL1F
+/n+5IQsibQJBAMFPXDXlyFOXSMwYPYLqcJMmJCR0f9oeDoyB40GX93wjD3+a0Pz7
+wLN/dfrJJobxmMHRic0MX1rBb8F3hTqR0e0CQGMke+7zk8osTs67QfJ2E1TwYc1M
+hyS3gd9LjFrHGuKaHjIiiWv/R/TqdwYpUHzwYhthYhnqFNpNPux87hugPB0CQQCb
+IshazNzXENswR+fdj63mub5Zr1EHyAVfB8JM2tuXuT9v5dwAmz3MD+er6xBLTcqN
+CU9wypQf7ot0lSnLlkkFAkAIOU9aGV6xqu1En4ATyDtH+mg64XKUtC0ZJWcYvVwz
+qGajydJv2ts5jmnzFScX7+coaMXGDkUx0rCKPksO3bRF
+-----END RSA PRIVATE KEY-----"""
+
+    rsa = RSA.importKey(private_key)
+    cipher = PKCS1_v1_5.new(rsa)
+
+    encStr = enc + "=" * ((4 - len(enc) % 4) % 4)
+
+    ciphertext = base64.b64decode(encStr)
+    plaintext = cipher.decrypt(ciphertext, b'DECRYPTION FAILED')
+    return plaintext.decode('utf8')
+
 def get_total_pages(username, password):
     #return "2"
     try:
@@ -151,8 +181,7 @@ def process(username, password, page):
         return ret
     except Exception as e:
         print(e)
-        return "Error logging in. Make sure your username and password are correct."
-        #return str(e)
+        return str(e)
 
 def add_helper(item, most_visited, relationships, fandoms, tags, authors):
     data = item[3]
@@ -178,11 +207,15 @@ def add_helper(item, most_visited, relationships, fandoms, tags, authors):
 def api_call():
     if request.method == 'POST':
         username = request.form.get('username')  # access the data inside 
-        password = request.form.get('password')
+        enc_password = request.form.get('password')
         #num_years = int(request.form.get('years'))
         page = request.form.get('page')
 
+        password = decrypt(enc_password)
+
         if page == "-1":
+            #return get_total_pages(username, password)
+            #val = 'kI3i8buptEVmZevcnU20ALa+xi9Z02fhMBAlVd0PQBjv1QHgrjPc1GV46BSEHzsrSgoenC0L5gH+Ef/snA8Io5ebH9oEwUK02tOvhB7ceO0aVnAAcouuROx/xuXxjuMVnAadGLW+sT45vQuBY9ZS52OZo1RcNppOiHoGrpB4jzk='
             return get_total_pages(username, password)
 
         return process_wrapper(username, password, page)
